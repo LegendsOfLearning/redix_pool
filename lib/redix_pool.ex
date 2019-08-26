@@ -17,20 +17,38 @@ defmodule RedixPool do
 
   @type command :: [binary]
 
-  @pool_name :redix_pool
+  @pool_name_prefix :redix_pool
+  @default_redis_url "redis://localhost:6379/0"
+  @default_pool_size 4
+  @default_pool_max_overflow 8
 
-  def start(_type, _args) do
+  def start(_type, args) do
     import Supervisor.Spec, warn: false
 
+    pool_key = args[:pool] || :default
+    default_pool_name = "#{@pool_name_prefix}_#{pool_key}" |> String.to_atom
+
+    pool_name = args[:pool_name] || Config.get({pool_key, :pool_name}, default_pool_name)
+    redis_url = args[:redis_url] || Config.get({pool_key, :redis_url}, @default_redis_url)
+    sock_opts = args[:sock_args] || Config.get({pool_key, :sock_args}, [])
+    pool_size = args[:pool_size] || Config.get({pool_key, :pool_size, :integer}, @default_pool_size)
+    pool_max_overflow = args[:pool_max_overflow] ||
+      Config.get({pool_key, :pool_size, :integer}, @default_pool_max_overflow)
+
     pool_options = [
-      name: {:local, @pool_name},
-      worker_module: RedixPool.Worker,
-      size: Config.get(:pool_size, 10),
-      max_overflow: Config.get(:pool_max_overflow, 1)
+      name:          {:local, pool_name},
+      worker_module: RedixPool.Worker
+      size:          pool_size,
+      max_overflow:  pool_max_overflow
+    ]
+
+    worker_options = [
+      redis_url:     redis_url,
+      sock_opts:     sock_opts,
     ]
 
     children = [
-      :poolboy.child_spec(@pool_name, pool_options, [])
+      :poolboy.child_spec(pool_name, pool_options, worker_options)
     ]
 
     opts = [strategy: :one_for_one, name: RedixPool.Supervisor]
