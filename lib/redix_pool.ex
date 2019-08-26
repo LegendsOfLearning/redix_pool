@@ -28,10 +28,11 @@ defmodule RedixPool do
     pool_key = args[:pool] || :default
     default_pool_name = "#{@pool_name_prefix}_#{pool_key}" |> String.to_atom
 
-    pool_name = args[:pool_name] || Config.get({pool_key, :pool_name}, default_pool_name)
-    redis_url = args[:redis_url] || Config.get({pool_key, :redis_url}, @default_redis_url)
-    sock_opts = args[:sock_args] || Config.get({pool_key, :sock_args}, [])
-    pool_size = args[:pool_size] || Config.get({pool_key, :pool_size, :integer}, @default_pool_size)
+    pool_name  = args[:pool_name]  || Config.get({pool_key, :pool_name}, default_pool_name)
+    redis_url  = args[:redis_url]  || Config.get({pool_key, :redis_url}, @default_redis_url)
+    redix_opts = args[:redix_opts] || Config.get({pool_key, :redix_opts}, [])
+
+    pool_size= args[:pool_size] || Config.get({pool_key, :pool_size, :integer}, @default_pool_size)
     pool_max_overflow = args[:pool_max_overflow] ||
       Config.get({pool_key, :pool_size, :integer}, @default_pool_max_overflow)
 
@@ -43,8 +44,8 @@ defmodule RedixPool do
     ]
 
     worker_options = [
-      redis_url:     redis_url,
-      sock_opts:     sock_opts,
+      redis_url:  redis_url,
+      redix_opts: sock_opts,
     ]
 
     children = [

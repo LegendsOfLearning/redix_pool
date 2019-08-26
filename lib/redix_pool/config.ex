@@ -5,7 +5,11 @@ defmodule RedixPool.Config do
   ```
   config :redix_pool, :default,
     redis_url: {:system, "DEFAULT_REDIS_URL"},
-    sock_opts: [:verify, :verify_none],
+    # https://hexdocs.pm/redix/0.10.2/Redix.html#start_link/1-options
+    redix_opts: [
+      sync_connect: true,
+      sock_opts: [:verify, :verify_none],
+    ],
     pool_size: {:system, "DEFAULT_POOL_SIZE", 4}
     pool_max_overflow: {:system, "DEFAULT_MAX_OVERFLOW", 8}
 
@@ -15,7 +19,12 @@ defmodule RedixPool.Config do
     # pool_name: :session_read_pool,
 
     redis_url: {:system, "SESSION_READ_REDIS_URL"}, # Defaults to redis://localhost:6379/0
-    sock_opts: [:verify, :verify_none],
+    redix_opts: [
+      timeout: 3000,
+      backoff_initial: 1000,
+      backoff_max: 10000,
+      sock_opts: [:verify, :verify_none]
+    ],
     pool_size: {:system, "SESSION_READ_POOL_SIZE", 8}
     pool_max_overflow: {:system, "SESSION_READ_MAX_OVERFLOW", 16}
   """
