@@ -22,6 +22,15 @@ defmodule RedixPool do
   @default_pool_size 4
   @default_pool_max_overflow 8
 
+  # This is hard-coded into the poolboy calls. Because
+  # we are inferring information here, we don't want to
+  # be doing this after getting the pool started.
+  # ways we can try to make this configurable:
+  #   - Store stuff back into Application env after computing it
+  #   - Use the Ecto.Repo pattern, and let the developer
+  #     decide how to get this config.
+  @default_timeout 5000
+
   def start(_type, args) do
     import Supervisor.Spec, warn: false
 
@@ -30,6 +39,7 @@ defmodule RedixPool do
 
     pool_name  = args[:pool_name]  || Config.get({pool_key, :pool_name}, default_pool_name)
     redis_url  = args[:redis_url]  || Config.get({pool_key, :redis_url}, @default_redis_url)
+    # TODO: Possibly filter this through resolve_config {:system, _}
     redix_opts = args[:redix_opts] || Config.get({pool_key, :redix_opts}, [])
 
     pool_size= args[:pool_size] || Config.get({pool_key, :pool_size, :integer}, @default_pool_size)
@@ -61,18 +71,18 @@ defmodule RedixPool do
 
   ## Examples
 
-      iex> RedixPool.command(["SET", "k", "foo"])
+      iex> RedixPool.command(:redix_pool_default, ["SET", "k", "foo"])
       {:ok, "OK"}
-      iex> RedixPool.command(["GET", "k"])
+      iex> RedixPool.command(:redix_pool_default, ["GET", "k"])
       {:ok, "foo"}
   """
-  @spec command(command, Keyword.t) ::
+  @spec command(atom, command, Keyword.t) ::
         {:ok, [Redix.Protocol.redis_value]} | {:error, atom | Redix.Error.t}
-  def command(args, opts \\ []) do
+  def command(pool_name, args, opts \\ []) do
     :poolboy.transaction(
-      @pool_name,
+      pool_name,
       fn(worker) -> GenServer.call(worker, {:command, args, opts}) end,
-      RedixPool.Config.get(:timeout, 5000)
+      @default_timeout
     )
   end
 
@@ -82,17 +92,17 @@ defmodule RedixPool do
 
   ## Examples
 
-      iex> RedixPool.command!(["SET", "k", "foo"])
+      iex> RedixPool.command!(:radix_pool_default, ["SET", "k", "foo"])
       "OK"
-      iex> RedixPool.command!(["GET", "k"])
+      iex> RedixPool.command!(:radix_pool_default, ["GET", "k"])
       "foo"
   """
-  @spec command!(command, Keyword.t) :: Redix.Protocol.redis_value | no_return
-  def command!(args, opts \\ []) do
+  @spec command!(atom, command, Keyword.t) :: Redix.Protocol.redis_value | no_return
+  def command!(pool_name, args, opts \\ []) do
     :poolboy.transaction(
-      @pool_name,
+      pool_name,
       fn(worker) -> GenServer.call(worker, {:command!, args, opts}) end,
-      Config.get(:timeout, 5000)
+      @default_timeout
     )
   end
 
@@ -101,19 +111,19 @@ defmodule RedixPool do
 
   ## Examples
 
-      iex> RedixPool.pipeline([["INCR", "mykey"], ["INCR", "mykey"], ["DECR", "mykey"]])
+      iex> RedixPool.pipeline(:radix_pool_default, [["INCR", "mykey"], ["INCR", "mykey"], ["DECR", "mykey"]])
       {:ok, [1, 2, 1]}
 
-      iex> RedixPool.pipeline([["SET", "k", "foo"], ["INCR", "k"], ["GET", "k"]])
+      iex> RedixPool.pipeline(:radix_pool_default, [["SET", "k", "foo"], ["INCR", "k"], ["GET", "k"]])
       {:ok, ["OK", %Redix.Error{message: "ERR value is not an integer or out of range"}, "foo"]}
   """
-  @spec pipeline([command], Keyword.t) ::
+  @spec pipeline(atom, [command], Keyword.t) ::
         {:ok, [Redix.Protocol.redis_value]} | {:error, atom}
-  def pipeline(args, opts \\ []) do
+  def pipeline(pool_name, args, opts \\ []) do
     :poolboy.transaction(
-      @pool_name,
+      pool_name,
       fn(worker) -> GenServer.call(worker, {:pipeline, args, opts}) end,
-      Config.get(:timeout, 5000)
+      @default_timeout
     )
   end
 
@@ -124,18 +134,18 @@ defmodule RedixPool do
 
   ## Examples
 
-      iex> RedixPool.pipeline!([["INCR", "mykey"], ["INCR", "mykey"], ["DECR", "mykey"]])
+      iex> RedixPool.pipeline!(:radix_pool_default, j[["INCR", "mykey"], ["INCR", "mykey"], ["DECR", "mykey"]])
       [1, 2, 1]
 
-      iex> RedixPool.pipeline!([["SET", "k", "foo"], ["INCR", "k"], ["GET", "k"]])
+      iex> RedixPool.pipeline!(:radix_pool_default, [["SET", "k", "foo"], ["INCR", "k"], ["GET", "k"]])
       ["OK", %Redix.Error{message: "ERR value is not an integer or out of range"}, "foo"]
   """
-  @spec pipeline!([command], Keyword.t) :: [Redix.Protocol.redis_value] | no_return
-  def pipeline!(args, opts \\ []) do
+  @spec pipeline!(atom, [command], Keyword.t) :: [Redix.Protocol.redis_value] | no_return
+  def pipeline!(pool_name, args, opts \\ []) do
     :poolboy.transaction(
-      @pool_name,
+      pool_name,
       fn(worker) -> GenServer.call(worker, {:pipeline!, args, opts}) end,
-      RedixPool.Config.get(:timeout, 5000)
+      @default_timeout
     )
   end
 end

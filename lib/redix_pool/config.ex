@@ -11,7 +11,8 @@ defmodule RedixPool.Config do
       sock_opts: [:verify, :verify_none],
     ],
     pool_size: {:system, "DEFAULT_POOL_SIZE", 4}
-    pool_max_overflow: {:system, "DEFAULT_MAX_OVERFLOW", 8}
+    pool_max_overflow: {:system, "DEFAULT_MAX_OVERFLOW", 8},
+    timeout: 5000
 
   # A pool named "read". This is also used to compute the process name
   config :redix_pool, :read,
