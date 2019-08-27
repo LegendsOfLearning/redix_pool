@@ -31,39 +31,38 @@ defmodule RedixPool.Config do
   """
 
   @doc false
-  def get({pool_name, key, :integer}, default \\ nil) do
+  def get({pool_name, key, :integer}, default) do
     {pool_name, key}
     |> get(default)
     |> maybe_to_integer
   end
 
   @doc false
-  def get({pool_name, key}, default \\ nil) do
-    value = Application.get_env(:redix_pool, pool_name, %{})[key] || default
-    resolve_config(value)
+  def get({pool_name, key}, default) do
+    :redix_pool
+    |> Application.get_env(pool_name, %{})[key]
+    |> resolve_config(default)
   end
 
   @doc false
-  def get(key, default \\ nil) when is_atom(key) do
+  def get(key, default) when is_atom(key) do
     get({:default, key}, default)
   end
+
+  def get({_pool_name, _key, :integer} = spec), do: get(spec, nil)
+  def get({_pool_name, _key} = spec), do: get(spec, nil)
+
+  @doc false
+  def get(key) when is_atom(key), do: get(key, nil)
 
   @doc "Helper function useful for parsing ENV variables"
   def maybe_to_integer(x) when is_binary(x),  do: String.to_integer(x)
   def maybe_to_integer(x) when is_integer(x), do: x
   def maybe_to_integer(x) when is_nil(x),     do: nil
 
-  defp either(a,b) do
-    if a do
-      a
-    else
-      b
-    end
-  end
-
   @doc false
   def resolve_config({:system, var_name}, default),
     do: System.get_env(var_name) || default
-  def resolve_config(value, _default),
-    do: value
+  def resolve_config(value, default) when is_nil(value), do: default
+  def resolve_config(value, _default), do: value
 end

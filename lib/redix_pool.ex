@@ -48,14 +48,14 @@ defmodule RedixPool do
 
     pool_options = [
       name:          {:local, pool_name},
-      worker_module: RedixPool.Worker
+      worker_module: RedixPool.Worker,
       size:          pool_size,
       max_overflow:  pool_max_overflow
     ]
 
     worker_options = [
       redis_url:  redis_url,
-      redix_opts: sock_opts,
+      redix_opts: redix_opts,
     ]
 
     children = [

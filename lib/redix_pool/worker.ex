@@ -1,8 +1,6 @@
 defmodule RedixPool.Worker do
   use GenServer
 
-  alias RedixPool.Config
-
   ## Client API
 
   def start_link([redis_url: redis_url] = args) do
@@ -15,12 +13,6 @@ defmodule RedixPool.Worker do
 
   def init(state) do
     {:ok, state}
-  end
-
-  @doc false
-  def handle_call({command, args, opts}, _from, %{conn: nil}) do
-    conn = connect()
-    {:reply, apply(Redix, command, [conn, args, opts]), %{conn: conn}}
   end
 
   @doc false
