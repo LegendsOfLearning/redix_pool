@@ -4,12 +4,6 @@ defmodule RedixPoolTest do
 
   alias RedixPool, as: Redix
 
-  setup do
-    RedixPool.start(:normal, [pool_name: :test_pool])
-    Redix.command(:test_pool, ["FLUSHDB"])
-    :ok
-  end
-
   def rand_key(key), do: "#{key}_#{SecureRandom.urlsafe_base64(16)}"
   def rand_key(), do: rand_key("test")
 

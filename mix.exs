@@ -1,9 +1,9 @@
 defmodule RedixPool.Mixfile do
   use Mix.Project
 
-  @version "0.2.0"
-  @description "Simple Redis pooling built on redix and poolboy"
-  @github_url "https://github.com/opendoor-labs/redix_pool"
+  @version "0.3.0"
+  @description "Redis pooling built on redix and poolboy. Supports multiple pools and redix connection options."
+  @github_url "https://github.com/LegendsOfLearning/redix_pool"
 
   def project do
     [app: :redix_pool,
@@ -17,7 +17,7 @@ defmodule RedixPool.Mixfile do
   end
 
   def package do
-    [maintainers: ["Connor Jacobsen"],
+    [maintainers: ["Connor Jacobsen", "Ho-Sheng Hsiao"],
      homepage_url: @github_url,
      licenses: ["MIT"],
      links: %{"Github" => @github_url},
@@ -30,7 +30,7 @@ defmodule RedixPool.Mixfile do
   def application do
     # Specify extra applications you'll use from Erlang/Elixir
     [extra_applications: [:logger],
-     mod: {RedixPool, []}]
+     mod: {RedixPool, [[pool: :default], [pool: :test_pool]]}]
   end
 
   # Dependencies can be Hex packages:

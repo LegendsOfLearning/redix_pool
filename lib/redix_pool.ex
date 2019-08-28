@@ -31,7 +31,37 @@ defmodule RedixPool do
   #     decide how to get this config.
   @default_timeout 5000
 
+  @doc "Start the default pool if args is empty"
+  def start(type, args) when length(args) == 0, do: start(type, [[]])
+
+  @doc """
+  Pass a list of pool specs to start
+
+  Example
+
+  ```elixir
+  def application do
+      [mod: {RedixPool,[
+        [pool: :default],
+        [pool: :sessions_ro, pool_name: :session_ro]]}]
+  end
+  ```
+
+  ```elixir
+    config :redix_pool, :default, []
+    config :redix_pool, :sessions_ro, []
+  ```
+  """
   def start(_type, args) when is_list(args) do
+    children = args
+    |> Enum.map(&__MODULE__.redix_pool_spec/1)
+    |> IO.inspect
+
+    opts = [strategy: :one_for_one, name: RedixPool.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+
+  def redix_pool_spec(args) when is_list(args) do
     import Supervisor.Spec, warn: false
 
     pool_key = args[:pool] || :default
@@ -58,12 +88,7 @@ defmodule RedixPool do
       redix_opts: redix_opts,
     ]
 
-    children = [
-      :poolboy.child_spec(pool_name, pool_options, worker_options)
-    ]
-
-    opts = [strategy: :one_for_one, name: RedixPool.Supervisor]
-    Supervisor.start_link(children, opts)
+    :poolboy.child_spec(pool_name, pool_options, worker_options)
   end
 
   @doc"""
