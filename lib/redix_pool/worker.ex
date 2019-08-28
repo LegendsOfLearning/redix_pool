@@ -3,9 +3,11 @@ defmodule RedixPool.Worker do
 
   ## Client API
 
-  def start_link([redis_url: redis_url] = args) do
+    def start_link(args) do
+    redis_url  = args[:redis_url] || raise ":redis_url is required to start redix worker"
     redix_opts = args[:redix_opts] || []
-    conn = connect(redis_url, redix_opts)
+
+    {:ok, conn} = Redix.start_link(redis_url, redix_opts)
     GenServer.start_link(__MODULE__, %{conn: conn}, [])
   end
 
@@ -20,8 +22,4 @@ defmodule RedixPool.Worker do
     {:reply, apply(Redix, command, [conn, args, opts]), %{conn: conn}}
   end
 
-  def connect(redis_url, opts) do
-    {:ok, conn} = Redix.start_link(redis_url, opts)
-    conn
-  end
 end

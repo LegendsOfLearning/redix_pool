@@ -40,7 +40,8 @@ defmodule RedixPool.Config do
   @doc false
   def get({pool_name, key}, default) do
     :redix_pool
-    |> Application.get_env(pool_name, %{})[key]
+    |> Application.get_env(pool_name, %{})
+    |> Access.get(key)
     |> resolve_config(default)
   end
 

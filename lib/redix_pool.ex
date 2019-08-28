@@ -31,7 +31,7 @@ defmodule RedixPool do
   #     decide how to get this config.
   @default_timeout 5000
 
-  def start(_type, args) do
+  def start(_type, args) when is_list(args) do
     import Supervisor.Spec, warn: false
 
     pool_key = args[:pool] || :default
