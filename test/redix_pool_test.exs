@@ -1,5 +1,5 @@
 defmodule RedixPoolTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   doctest RedixPool
 
   alias RedixPool, as: Redix
@@ -10,43 +10,60 @@ defmodule RedixPoolTest do
     :ok
   end
 
-  test "basic command method" do
-    assert Redix.command(:test_pool, ["SET", "foo", "bar"]) == {:ok, "OK"}
-    assert Redix.command(:test_pool, ["GET", "foo"]) == {:ok, "bar"}
+  def rand_key(key), do: "#{key}_#{SecureRandom.urlsafe_base64(16)}"
+  def rand_key(), do: rand_key("test")
 
-    assert Redix.command(:test_pool, ["HSET", "foobar", "field", "value"]) == {:ok, 1}
-    assert Redix.command(:test_pool, ["HGET", "foobar", "field"]) == {:ok, "value"}
+  test "RedixPool.command/2" do
+    {key, value} = {rand_key(), rand_key()}
+    assert Redix.command(:test_pool, ["SET", key, value]) == {:ok, "OK"}
+    assert Redix.command(:test_pool, ["GET", key]) == {:ok, value}
+
+    {hashkey, key, value} = {rand_key(), rand_key(), rand_key()}
+    assert Redix.command(:test_pool, ["HSET", hashkey, key, value]) == {:ok, 1}
+    assert Redix.command(:test_pool, ["HGET", hashkey, key]) == {:ok, value}
   end
 
-  test "basic command! method" do
-    assert Redix.command!(:test_pool, ["SET", "foo", "bar"]) == "OK"
-    assert Redix.command!(:test_pool, ["GET", "foo"]) == "bar"
+  test "RedixPool.command!/2" do
+    {key, value} = {rand_key(), rand_key()}
+    assert Redix.command!(:test_pool, ["SET", key, value]) == "OK"
+    assert Redix.command!(:test_pool, ["GET", key]) == value
 
-    assert Redix.command!(:test_pool, ["HSET", "foobar", "field", "value"]) == 1
-    assert Redix.command!(:test_pool, ["HGET", "foobar", "field"]) == "value"
+    {hashkey, key, value} = {rand_key(), rand_key(), rand_key()}
+    assert Redix.command!(:test_pool, ["HSET", hashkey, key, value]) == 1
+    assert Redix.command!(:test_pool, ["HGET", hashkey, key]) == value
   end
 
-  test "basic pipeline method" do
-    assert Redix.pipeline(:test_pool, [["SET", "foo", "bar"],
-                           ["SET", "baz", "bat"]]) == {:ok, ["OK", "OK"]}
-    assert Redix.command(:test_pool, ["GET", "foo"]) == {:ok, "bar"}
-    assert Redix.command(:test_pool, ["GET", "baz"]) == {:ok, "bat"}
+  test "RedixPool.pipeline/2" do
+    {k1, v1} = {rand_key(), rand_key()}
+    {k2, v2} = {rand_key(), rand_key()}
+    assert Redix.pipeline(:test_pool,
+      [["SET", k1, v1], ["SET", k2, v2]]) == {:ok, ["OK", "OK"]}
+    assert Redix.command(:test_pool, ["GET", k1]) == {:ok, v1}
+    assert Redix.command(:test_pool, ["GET", k1]) == {:ok, v2}
 
-    assert Redix.pipeline(:test_pool, [["HSET", "foobar", "foo", "bar"],
-                           ["HSET", "foobar", "baz", "bat"]]) == {:ok, [1, 1]}
-    assert Redix.command(:test_pool, ["HGET", "foobar", "foo"]) == {:ok, "bar"}
-    assert Redix.command(:test_pool, ["HGET", "foobar", "baz"]) == {:ok, "bat"}
+    hash = rand_key()
+    {k1, v1} = {rand_key(), rand_key()}
+    {k2, v2} = {rand_key(), rand_key()}
+    assert Redix.pipeline(:test_pool,
+      [["HSET", hash, k1, v1], ["HSET", hash, k2, v2]]) == {:ok, [1, 1]}
+    assert Redix.command(:test_pool, ["HGET", hash, k1]) == {:ok, v1}
+    assert Redix.command(:test_pool, ["HGET", hash, k2]) == {:ok, v2}
   end
 
-  test "basic pipeline! method" do
-    assert Redix.pipeline!(:test_pool, [["SET", "foo", "bar"],
-                            ["SET", "baz", "bat"]]) == ["OK", "OK"]
-    assert Redix.command(:test_pool, ["GET", "foo"]) == {:ok, "bar"}
-    assert Redix.command(:test_pool, ["GET", "baz"]) == {:ok, "bat"}
+  test "RedixPool.pipeline!/2" do
+    {k1, v1} = {rand_key(), rand_key()}
+    {k2, v2} = {rand_key(), rand_key()}
+    assert Redix.pipeline!(:test_pool,
+      [["SET", k1, v1], ["SET", k2, v2]]) == ["OK", "OK"]
+    assert Redix.command(:test_pool, ["GET", k1]) == {:ok, v1}
+    assert Redix.command(:test_pool, ["GET", k1]) == {:ok, v2}
 
-    assert Redix.pipeline!(:test_pool, [["HSET", "foobar", "foo", "bar"],
-                            ["HSET", "foobar", "baz", "bat"]]) == [1, 1]
-    assert Redix.command(:test_pool, ["HGET", "foobar", "foo"]) == {:ok, "bar"}
-    assert Redix.command(:test_pool, ["HGET", "foobar", "baz"]) == {:ok, "bat"}
+    hash = rand_key()
+    {k1, v1} = {rand_key(), rand_key()}
+    {k2, v2} = {rand_key(), rand_key()}
+    assert Redix.pipeline!(:test_pool,
+      [["HSET", hash, k1, v1], ["HSET", hash, k2, v2]]) == [1, 1]
+    assert Redix.command(:test_pool, ["HGET", hash, k1]) == {:ok, v1}
+    assert Redix.command(:test_pool, ["HGET", hash, k2]) == {:ok, v2}
   end
 end
