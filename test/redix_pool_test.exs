@@ -1,7 +1,6 @@
 defmodule RedixPoolTest do
   use ExUnit.Case, async: true
-  # TODO: doctest runs before the RedixPool app starts. Not sure why.
-  # doctest RedixPool
+  #doctest RedixPool
 
   alias RedixPool, as: Redix
 
@@ -34,7 +33,7 @@ defmodule RedixPoolTest do
     assert Redix.pipeline(:test_pool,
       [["SET", k1, v1], ["SET", k2, v2]]) == {:ok, ["OK", "OK"]}
     assert Redix.command(:test_pool, ["GET", k1]) == {:ok, v1}
-    assert Redix.command(:test_pool, ["GET", k1]) == {:ok, v2}
+    assert Redix.command(:test_pool, ["GET", k2]) == {:ok, v2}
 
     hash = rand_key()
     {k1, v1} = {rand_key(), rand_key()}
@@ -51,7 +50,7 @@ defmodule RedixPoolTest do
     assert Redix.pipeline!(:test_pool,
       [["SET", k1, v1], ["SET", k2, v2]]) == ["OK", "OK"]
     assert Redix.command(:test_pool, ["GET", k1]) == {:ok, v1}
-    assert Redix.command(:test_pool, ["GET", k1]) == {:ok, v2}
+    assert Redix.command(:test_pool, ["GET", k2]) == {:ok, v2}
 
     hash = rand_key()
     {k1, v1} = {rand_key(), rand_key()}

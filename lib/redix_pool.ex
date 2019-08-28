@@ -42,20 +42,20 @@ defmodule RedixPool do
   ```elixir
   def application do
       [mod: {RedixPool,[
-        [pool: :radix_pool],
+        [pool: :redix_default],
         [pool: :sessions_ro, pool_name: :session_ro]]}]
   end
   ```
 
   ```elixir
-    config :redix_pool, :radix_pool, []
+    config :redix_pool, :redix_default, []
     config :redix_pool, :sessions_ro, []
   ```
   """
   def start(_type, args) when is_list(args) do
     children = args
     |> Enum.map(&__MODULE__.redix_pool_spec/1)
-    |> IO.inspect
+    # |> IO.inspect
 
     opts = [strategy: :one_for_one, name: RedixPool.Supervisor]
     Supervisor.start_link(children, opts)
@@ -94,9 +94,9 @@ defmodule RedixPool do
 
   ## Examples
 
-      iex> RedixPool.command(:redix_pool, ["SET", "k", "foo"])
+      iex> RedixPool.command(:redix_default, ["SET", "k", "foo"])
       {:ok, "OK"}
-      iex> RedixPool.command(:redix_pool, ["GET", "k"])
+      iex> RedixPool.command(:redix_default, ["GET", "k"])
       {:ok, "foo"}
   """
   @spec command(atom, command, Keyword.t) ::
@@ -115,9 +115,9 @@ defmodule RedixPool do
 
   ## Examples
 
-      iex> RedixPool.command!(:radix_pool, ["SET", "k", "foo"])
+      iex> RedixPool.command!(:redix_default, ["SET", "k", "foo"])
       "OK"
-      iex> RedixPool.command!(:radix_pool, ["GET", "k"])
+      iex> RedixPool.command!(:redix_default, ["GET", "k"])
       "foo"
   """
   @spec command!(atom, command, Keyword.t) :: Redix.Protocol.redis_value | no_return
@@ -134,10 +134,10 @@ defmodule RedixPool do
 
   ## Examples
 
-      iex> RedixPool.pipeline(:radix_pool, [["INCR", "mykey"], ["INCR", "mykey"], ["DECR", "mykey"]])
+      iex> RedixPool.pipeline(:redix_default, [["INCR", "mykey"], ["INCR", "mykey"], ["DECR", "mykey"]])
       {:ok, [1, 2, 1]}
 
-      iex> RedixPool.pipeline(:radix_pool, [["SET", "k", "foo"], ["INCR", "k"], ["GET", "k"]])
+      iex> RedixPool.pipeline(:redix_default, [["SET", "k", "foo"], ["INCR", "k"], ["GET", "k"]])
       {:ok, ["OK", %Redix.Error{message: "ERR value is not an integer or out of range"}, "foo"]}
   """
   @spec pipeline(atom, [command], Keyword.t) ::
@@ -157,10 +157,10 @@ defmodule RedixPool do
 
   ## Examples
 
-      iex> RedixPool.pipeline!(:radix_pool, [["INCR", "mykey"], ["INCR", "mykey"], ["DECR", "mykey"]])
+      iex> RedixPool.pipeline!(:redix_default, [["INCR", "mykey"], ["INCR", "mykey"], ["DECR", "mykey"]])
       [1, 2, 1]
 
-      iex> RedixPool.pipeline!(:radix_pool, [["SET", "k", "foo"], ["INCR", "k"], ["GET", "k"]])
+      iex> RedixPool.pipeline!(:redix_default, [["SET", "k", "foo"], ["INCR", "k"], ["GET", "k"]])
       ["OK", %Redix.Error{message: "ERR value is not an integer or out of range"}, "foo"]
   """
   @spec pipeline!(atom, [command], Keyword.t) :: [Redix.Protocol.redis_value] | no_return

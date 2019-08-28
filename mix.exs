@@ -30,7 +30,7 @@ defmodule RedixPool.Mixfile do
   def application do
     # Specify extra applications you'll use from Erlang/Elixir
     [extra_applications: [:logger],
-     mod: {RedixPool, [[pool: :default], [pool: :test_pool]]}]
+     mod: {RedixPool, [[pool: :redix_default], [pool: :test_pool]]}]
   end
 
   # Dependencies can be Hex packages:
@@ -44,7 +44,7 @@ defmodule RedixPool.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [{:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
-     {:secure_random, "~> 0.5", only: :dev, runtime: false},
+     {:secure_random, "~> 0.5", only: :test, runtime: false},
      {:redix, "~> 0.10"},
      {:poolboy, "~> 1.5"}]
   end
