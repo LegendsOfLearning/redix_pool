@@ -29,7 +29,7 @@ end
 # myapp/config/config.exs
 use Mix.Config
 
-config :redix_pool, default
+config :redix_pool, :redix_default
   redis_url: "redis://localhost:6379",
   pool_size: {:system, "POOL_SIZE"}, # System.get_env("POOL_SIZE") will be executed at runtime
   pool_max_overflow: 1,
@@ -37,11 +37,8 @@ config :redix_pool, default
     sync_connect: true,
   ]
 
-# A pool named "session_read_pool". This is also used to compute the process name
-config :redix_pool, :read,
-  # Optional pool name. By default, it is :redix_pool_<pool_name>
-  pool_name: :session_read_pool,
-
+# A pool named "sessions_rw"
+config :redix_pool, :sessions_rw,
   redis_url: {:system, "SESSION_READ_REDIS_URL"}, # Defaults to redis://localhost:6379/0
   redix_opts: [
     timeout: 3000,
@@ -50,7 +47,8 @@ config :redix_pool, :read,
     sock_opts: [:verify, :verify_none]
   ], # See: https://hexdocs.pm/redix/0.10.2/Redix.html#start_link/1-options
   pool_size: {:system, "SESSION_READ_POOL_SIZE", 8}
-  pool_max_overflow: {:system, "SESSION_READ_MAX_OVERFLOW", 16}
+  pool_max_overflow: {:system, "SESSION_READ_MAX_OVERFLOW", 16},
+  timeout: 10000
 ```
 
 ## Basic Usage
@@ -62,15 +60,13 @@ This means using `command` is as simple as:
 ```elixir
 alias RedixPool, as: Redis
 
-Redis.start(:normal, [pool: :default])
-
-Redis.command(:redix_pool_default, ["FLUSHDB"])
+Redis.command(:redix_default, ["FLUSHDB"])
 #=> {:ok, "OK"}
 
-Redis.command(:redix_pool_default, ["SET", "foo", "bar"])
+Redis.command(:redix_default, ["SET", "foo", "bar"])
 #=> {:ok, "OK"}
 
-Redis.command(:redix_pool_default, ["GET", "foo"])
+Redis.command(:redix_default, ["GET", "foo"])
 #=> {:ok, "bar"}
 ```
 
