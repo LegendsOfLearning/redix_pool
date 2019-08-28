@@ -1,14 +1,14 @@
 defmodule RedixPool.Worker do
   use GenServer
 
-  alias RedixPool.Config
-
-  @redis_url "redis://localhost:6379"
-
   ## Client API
 
-  def start_link(_) do
-    GenServer.start_link(__MODULE__, %{conn: nil}, [])
+    def start_link(args) do
+    redis_url  = args[:redis_url] || raise ":redis_url is required to start redix worker"
+    redix_opts = args[:redix_opts] || []
+
+    {:ok, conn} = Redix.start_link(redis_url, redix_opts)
+    GenServer.start_link(__MODULE__, %{conn: conn}, [])
   end
 
   ## Server API
@@ -18,19 +18,8 @@ defmodule RedixPool.Worker do
   end
 
   @doc false
-  def handle_call({command, args, opts}, _from, %{conn: nil}) do
-    conn = connect()
-    {:reply, apply(Redix, command, [conn, args, opts]), %{conn: conn}}
-  end
-
-  @doc false
   def handle_call({command, args, opts}, _from, %{conn: conn}) do
     {:reply, apply(Redix, command, [conn, args, opts]), %{conn: conn}}
   end
 
-  defp connect do
-    redis_url = Config.get(:redis_url, @redis_url)
-    {:ok, conn} = Redix.start_link(redis_url)
-    conn
-  end
 end

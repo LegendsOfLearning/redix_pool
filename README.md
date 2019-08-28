@@ -15,6 +15,12 @@ def deps do
 end
 ```
 
+```elixir
+def deps do
+  [{:redix_pool, github: "LegendsOfLearning/redix_pool", branch: "master"}]
+end
+```
+
 ## Configuration
 
 `RedixPool` currently only supports a few basic configuration options:
@@ -23,28 +29,44 @@ end
 # myapp/config/config.exs
 use Mix.Config
 
-config :redix_pool,
+config :redix_pool, :redix_default
   redis_url: "redis://localhost:6379",
   pool_size: {:system, "POOL_SIZE"}, # System.get_env("POOL_SIZE") will be executed at runtime
-  pool_max_overflow: 1
+  pool_max_overflow: 1,
+  redix_opts: [
+    sync_connect: true,
+  ]
+
+# A pool named "sessions_rw"
+config :redix_pool, :sessions_rw,
+  redis_url: {:system, "SESSION_READ_REDIS_URL"}, # Defaults to redis://localhost:6379/0
+  redix_opts: [
+    timeout: 3000,
+    backoff_initial: 1000,
+    backoff_max: 10000,
+    sock_opts: [:verify, :verify_none]
+  ], # See: https://hexdocs.pm/redix/0.10.2/Redix.html#start_link/1-options
+  pool_size: {:system, "SESSION_READ_POOL_SIZE", 8}
+  pool_max_overflow: {:system, "SESSION_READ_MAX_OVERFLOW", 16},
+  timeout: 10000
 ```
 
 ## Basic Usage
 
-`RedixPool` supports `command/2` and `pipeline/2` (and their bang variants), which are just like the `Redix` `command/3` and `pipeline/3` functions, except `RedixPool` handles the connection for you.
+`RedixPool` supports `command/3` and `pipeline/3` (and their bang variants), which are just like the `Redix` `command/3` and `pipeline/3` functions, except `RedixPool` handles the connection for you.
 
 This means using `command` is as simple as:
 
 ```elixir
 alias RedixPool, as: Redis
 
-Redis.command(["FLUSHDB"])
+Redis.command(:redix_default, ["FLUSHDB"])
 #=> {:ok, "OK"}
 
-Redis.command(["SET", "foo", "bar"])
+Redis.command(:redix_default, ["SET", "foo", "bar"])
 #=> {:ok, "OK"}
 
-Redis.command(["GET", "foo"])
+Redis.command(:redix_default, ["GET", "foo"])
 #=> {:ok, "bar"}
 ```
 
