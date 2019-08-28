@@ -60,4 +60,18 @@ defmodule RedixPoolTest do
     assert Redix.command(:test_pool, ["HGET", hash, k1]) == {:ok, v1}
     assert Redix.command(:test_pool, ["HGET", hash, k2]) == {:ok, v2}
   end
+
+  test "Exercise pooling" do
+    tasks =
+    for i <- 1..100 do
+      Task.async(fn ->
+        {key, value} = {rand_key(), rand_key()}
+        assert Redix.command(:test_pool, ["SET", key, value]) == {:ok, "OK"}
+        assert Redix.command(:test_pool, ["GET", key]) == {:ok, value}
+        i
+      end)
+    end
+
+    Task.yield_many(tasks, 5000)
+  end
 end
