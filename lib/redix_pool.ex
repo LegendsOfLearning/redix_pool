@@ -42,13 +42,13 @@ defmodule RedixPool do
   ```elixir
   def application do
       [mod: {RedixPool,[
-        [pool: :default],
+        [pool: :radix_pool],
         [pool: :sessions_ro, pool_name: :session_ro]]}]
   end
   ```
 
   ```elixir
-    config :redix_pool, :default, []
+    config :redix_pool, :radix_pool, []
     config :redix_pool, :sessions_ro, []
   ```
   """
@@ -64,17 +64,15 @@ defmodule RedixPool do
   def redix_pool_spec(args) when is_list(args) do
     import Supervisor.Spec, warn: false
 
-    pool_key = args[:pool] || :default
-    default_pool_name = "#{@pool_name_prefix}_#{pool_key}" |> String.to_atom
+    pool_name = args[:pool] || raise "Must pass in :pool to name process"
 
-    pool_name  = args[:pool_name]  || Config.get({pool_key, :pool_name}, default_pool_name)
-    redis_url  = args[:redis_url]  || Config.get({pool_key, :redis_url}, @default_redis_url)
+    redis_url  = args[:redis_url]  || Config.get({pool_name, :redis_url}, @default_redis_url)
     # TODO: Possibly filter this through resolve_config {:system, _}
-    redix_opts = args[:redix_opts] || Config.get({pool_key, :redix_opts}, [])
+    redix_opts = args[:redix_opts] || Config.get({pool_name, :redix_opts}, [])
 
-    pool_size= args[:pool_size] || Config.get({pool_key, :pool_size, :integer}, @default_pool_size)
+    pool_size= args[:pool_size] || Config.get({pool_name, :pool_size, :integer}, @default_pool_size)
     pool_max_overflow = args[:pool_max_overflow] ||
-      Config.get({pool_key, :pool_size, :integer}, @default_pool_max_overflow)
+      Config.get({pool_name, :pool_size, :integer}, @default_pool_max_overflow)
 
     pool_options = [
       name:          {:local, pool_name},
@@ -96,9 +94,9 @@ defmodule RedixPool do
 
   ## Examples
 
-      iex> RedixPool.command(:redix_pool_default, ["SET", "k", "foo"])
+      iex> RedixPool.command(:redix_pool, ["SET", "k", "foo"])
       {:ok, "OK"}
-      iex> RedixPool.command(:redix_pool_default, ["GET", "k"])
+      iex> RedixPool.command(:redix_pool, ["GET", "k"])
       {:ok, "foo"}
   """
   @spec command(atom, command, Keyword.t) ::
@@ -107,7 +105,7 @@ defmodule RedixPool do
     :poolboy.transaction(
       pool_name,
       fn(worker) -> GenServer.call(worker, {:command, args, opts}) end,
-      @default_timeout
+      poolboy_timeout(pool_name)
     )
   end
 
@@ -117,9 +115,9 @@ defmodule RedixPool do
 
   ## Examples
 
-      iex> RedixPool.command!(:radix_pool_default, ["SET", "k", "foo"])
+      iex> RedixPool.command!(:radix_pool, ["SET", "k", "foo"])
       "OK"
-      iex> RedixPool.command!(:radix_pool_default, ["GET", "k"])
+      iex> RedixPool.command!(:radix_pool, ["GET", "k"])
       "foo"
   """
   @spec command!(atom, command, Keyword.t) :: Redix.Protocol.redis_value | no_return
@@ -127,7 +125,7 @@ defmodule RedixPool do
     :poolboy.transaction(
       pool_name,
       fn(worker) -> GenServer.call(worker, {:command!, args, opts}) end,
-      @default_timeout
+      poolboy_timeout(pool_name)
     )
   end
 
@@ -136,10 +134,10 @@ defmodule RedixPool do
 
   ## Examples
 
-      iex> RedixPool.pipeline(:radix_pool_default, [["INCR", "mykey"], ["INCR", "mykey"], ["DECR", "mykey"]])
+      iex> RedixPool.pipeline(:radix_pool, [["INCR", "mykey"], ["INCR", "mykey"], ["DECR", "mykey"]])
       {:ok, [1, 2, 1]}
 
-      iex> RedixPool.pipeline(:radix_pool_default, [["SET", "k", "foo"], ["INCR", "k"], ["GET", "k"]])
+      iex> RedixPool.pipeline(:radix_pool, [["SET", "k", "foo"], ["INCR", "k"], ["GET", "k"]])
       {:ok, ["OK", %Redix.Error{message: "ERR value is not an integer or out of range"}, "foo"]}
   """
   @spec pipeline(atom, [command], Keyword.t) ::
@@ -148,7 +146,7 @@ defmodule RedixPool do
     :poolboy.transaction(
       pool_name,
       fn(worker) -> GenServer.call(worker, {:pipeline, args, opts}) end,
-      @default_timeout
+      poolboy_timeout(pool_name)
     )
   end
 
@@ -159,10 +157,10 @@ defmodule RedixPool do
 
   ## Examples
 
-      iex> RedixPool.pipeline!(:radix_pool_default, j[["INCR", "mykey"], ["INCR", "mykey"], ["DECR", "mykey"]])
+      iex> RedixPool.pipeline!(:radix_pool, [["INCR", "mykey"], ["INCR", "mykey"], ["DECR", "mykey"]])
       [1, 2, 1]
 
-      iex> RedixPool.pipeline!(:radix_pool_default, [["SET", "k", "foo"], ["INCR", "k"], ["GET", "k"]])
+      iex> RedixPool.pipeline!(:radix_pool, [["SET", "k", "foo"], ["INCR", "k"], ["GET", "k"]])
       ["OK", %Redix.Error{message: "ERR value is not an integer or out of range"}, "foo"]
   """
   @spec pipeline!(atom, [command], Keyword.t) :: [Redix.Protocol.redis_value] | no_return
@@ -170,7 +168,14 @@ defmodule RedixPool do
     :poolboy.transaction(
       pool_name,
       fn(worker) -> GenServer.call(worker, {:pipeline!, args, opts}) end,
-      @default_timeout
+      poolboy_timeout(pool_name)
     )
+  end
+
+  @doc false
+  defp poolboy_timeout(pool_name) do
+    :radix_pool
+    Application.get_env(:radix_pool, pool_name)
+    |> Access.get(:timeout, @default_timeout)
   end
 end
