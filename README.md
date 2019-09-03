@@ -1,19 +1,8 @@
 # RedixPool
 
-Simple Redis pooling built on [redix](https://github.com/whatyouhide/redix) and [poolboy](https://github.com/devinus/poolboy).
-
-![circleci-shield](https://circleci.com/gh/opendoor-labs/redix_pool.svg?style=shield&circle-token=c503d1e0da6337b12043465c54ac240d0e902d04)
+Redis pooling built on [redix](https://github.com/whatyouhide/redix) and [poolboy](https://github.com/devinus/poolboy).
 
 ## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `redix_pool` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [{:redix_pool, "~> 0.1.0"}]
-end
-```
 
 ```elixir
 def deps do
@@ -23,7 +12,7 @@ end
 
 ## Configuration
 
-`RedixPool` currently only supports a few basic configuration options:
+`RedixPool` supports both poolboy configuration as well as Redix configurations.
 
 ```elixir
 # myapp/config/config.exs
@@ -50,6 +39,12 @@ config :redix_pool, :sessions_rw,
   pool_max_overflow: {:system, "SESSION_READ_MAX_OVERFLOW", 16},
   timeout: 10000
 ```
+
+If you want to to use this as a part of a supervision tree:
+
+```elixir
+```
+
 
 ## Basic Usage
 

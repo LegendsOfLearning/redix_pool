@@ -17,11 +17,6 @@ defmodule RedixPool do
 
   @type command :: [binary]
 
-  @pool_name_prefix :redix_pool
-  @default_redis_url "redis://localhost:6379/0"
-  @default_pool_size 4
-  @default_pool_max_overflow 8
-
   # This is hard-coded into the poolboy calls. Because
   # we are inferring information here, we don't want to
   # be doing this after getting the pool started.
@@ -52,8 +47,8 @@ defmodule RedixPool do
     config :redix_pool, :sessions_ro, []
   ```
   """
-  def start(_type, args) when is_list(args) do
-    children = args
+  def start(_type, _args) do
+    children = Config.starting_pools
     |> Enum.map(&__MODULE__.redix_pool_spec/1)
     # |> IO.inspect
 
@@ -61,32 +56,41 @@ defmodule RedixPool do
     Supervisor.start_link(children, opts)
   end
 
+  @doc "Returns a poolboy child spec based upon parsing configs"
   def redix_pool_spec(args) when is_list(args) do
-    import Supervisor.Spec, warn: false
+    %{
+      pool_name: pool_name,
+      redis_url: redis_url,
+      redix_opts: redix_opts,
+      pool_size: pool_size,
+      pool_max_overflow: pool_max_overflow
+    } = Config.config_map(args)
 
-    pool_name = args[:pool] || raise "Must pass in :pool to name process"
-
-    redis_url  = args[:redis_url]  || Config.get({pool_name, :redis_url}, @default_redis_url)
-    # TODO: Possibly filter this through resolve_config {:system, _}
-    redix_opts = args[:redix_opts] || Config.get({pool_name, :redix_opts}, [])
-
-    pool_size= args[:pool_size] || Config.get({pool_name, :pool_size, :integer}, @default_pool_size)
-    pool_max_overflow = args[:pool_max_overflow] ||
-      Config.get({pool_name, :pool_size, :integer}, @default_pool_max_overflow)
+    # Extract Redix worker module and opts from Redix.child_spec
+    # This allows poolboy to supervise Redix.Connection workers directly,
+    # minimizing deep-copies.
+    %{start: {redix_worker_mod, _start_link, worker_args}} = Redix.child_spec({redis_url, redix_opts})
 
     pool_options = [
       name:          {:local, pool_name},
-      worker_module: RedixPool.Worker,
+      worker_module: redix_worker_mod,
       size:          pool_size,
       max_overflow:  pool_max_overflow
     ]
 
-    worker_options = [
+    :poolboy.child_spec(pool_name, pool_options, worker_args)
+  end
+
+  @doc """
+  Returns a child spec for a single worker based upon parsing configs.
+  """
+  def redis_worker_spec(args) do
+    %{
       redis_url:  redis_url,
       redix_opts: redix_opts,
-    ]
+    } = Config.config_map(args)
 
-    :poolboy.child_spec(pool_name, pool_options, worker_options)
+    Redix.child_spec({redis_url, redix_opts})
   end
 
   @doc"""
