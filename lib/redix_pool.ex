@@ -65,6 +65,7 @@ defmodule RedixPool do
   end
 
   @doc "Returns a poolboy child spec based upon parsing configs"
+  def redix_pool_spec(pool_name) when is_atom(pool_name), do: redix_pool_spec(pool: pool_name)
   def redix_pool_spec(args) when is_list(args) do
     %{
       pool_name: pool_name,

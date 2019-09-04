@@ -9,7 +9,7 @@ use Mix.Config
 # 3rd-party users, it should be done in your "mix.exs" file.
 
 config :redix_pool,
-  start_pool: [:redix_default]
+  start_pools: [:redix_default]
 
 config :redix_pool, :redix_default, []
 config :redix_pool, :test_pool, [timeout: 2000]
