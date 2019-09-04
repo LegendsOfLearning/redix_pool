@@ -107,6 +107,8 @@ defmodule RedixPool.Config do
   def maybe_to_integer(x) when is_nil(x),     do: nil
 
   @doc false
+  def resolve_config({:system, var_name, user_default}, _lib_default),
+    do: System.get_env(var_name) || user_default
   def resolve_config({:system, var_name}, default),
     do: System.get_env(var_name) || default
   def resolve_config(value, default) when is_nil(value), do: default
