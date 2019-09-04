@@ -50,5 +50,15 @@ defmodule RedixPoolConfigTest do
       pool_size: pool_size
     } = RedixPool.Config.config_map(pool: :test_env_parsing)
     assert pool_size == expected_pool_size
+
+    # Test parsing from env variable when it is blank
+    # Should default to what has been set
+    :ok = System.put_env("TEST_POOL_SIZE", "")
+    assert System.get_env("TEST_POOL_SIZE") == ""
+
+    %{
+      pool_size: pool_size
+    } = RedixPool.Config.config_map(pool: :test_env_parsing)
+    assert pool_size == 8
   end
 end

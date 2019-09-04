@@ -108,9 +108,14 @@ defmodule RedixPool.Config do
 
   @doc false
   def resolve_config({:system, var_name, user_default}, _lib_default),
-    do: System.get_env(var_name) || user_default
+    do: System.get_env(var_name) |> present_or_default(user_default)
   def resolve_config({:system, var_name}, default),
-    do: System.get_env(var_name) || default
+    do: System.get_env(var_name) |> present_or_default(default)
   def resolve_config(value, default) when is_nil(value), do: default
   def resolve_config(value, _default), do: value
+
+  @doc false
+  defp present_or_default(x, default) when is_nil(x), do: default
+  defp present_or_default("", default), do: default
+  defp present_or_default(x, _default), do: x
 end
