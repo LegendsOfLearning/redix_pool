@@ -26,7 +26,8 @@ config :redix_pool, :test_env_config,
   redis_url: {:system, "TEST_REDIS_URL", "redis://127.0.0.1/6379/1"}
 
 config :redix_pool, :test_env_parsing,
-  pool_size: {:system, "TEST_POOL_SIZE", 8}
+  pool_size: {:system, "TEST_POOL_SIZE", 8},
+  pool_max_overflow: {:system, "TEST_POOL_MAX_OVERFLOW", 16}
 
 # You can configure for your application as:
 #

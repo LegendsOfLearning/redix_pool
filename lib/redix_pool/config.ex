@@ -49,7 +49,7 @@ defmodule RedixPool.Config do
 
     pool_size= args[:pool_size] || get({pool_name, :pool_size, :integer}, @default_pool_size)
     pool_max_overflow = args[:pool_max_overflow] ||
-      get({pool_name, :pool_size, :integer}, @default_pool_max_overflow)
+      get({pool_name, :pool_max_overflow, :integer}, @default_pool_max_overflow)
 
     %{
       pool_name: pool_name,
