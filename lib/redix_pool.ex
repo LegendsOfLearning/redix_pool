@@ -56,6 +56,14 @@ defmodule RedixPool do
     Supervisor.start_link(children, opts)
   end
 
+  @doc "Convenience helper for starting a pool supervisor"
+  def start_pool(pool_name) when is_atom(pool_name), do: start_pool(pool: pool_name)
+  def start_pool(args) when is_list(args) do
+    children = [RedixPool.redix_pool_spec(args)]
+    {:ok, pid} = Supervisor.start_link(children, strategy: :one_for_one)
+    {:ok, pid}
+  end
+
   @doc "Returns a poolboy child spec based upon parsing configs"
   def redix_pool_spec(args) when is_list(args) do
     %{
@@ -69,11 +77,19 @@ defmodule RedixPool do
     # Extract Redix worker module and opts from Redix.child_spec
     # This allows poolboy to supervise Redix.Connection workers directly,
     # minimizing deep-copies.
-    %{start: {redix_worker_mod, _start_link, worker_args}} = Redix.child_spec({redis_url, redix_opts})
+    #%{start: {redix_worker_mod, _start_link, worker_args}} = {redis_url, redix_opts}
+    #|> normalize_redix_spec
+    #|> Redix.child_spec
+
+    # NOTE: Redix has a bug in child_spec which wraps the keyword list into
+    # another list. Poolboy will only accept worker args in the form of a
+    # keyword list. So here, we have to know some of the implementation
+    # details of redix to make this work.
+    worker_args = normalize_redix_spec({redis_url, redix_opts})
 
     pool_options = [
       name:          {:local, pool_name},
-      worker_module: redix_worker_mod,
+      worker_module: Redix,
       size:          pool_size,
       max_overflow:  pool_max_overflow
     ]
@@ -84,17 +100,31 @@ defmodule RedixPool do
   @doc """
   Returns a child spec for a single worker based upon parsing configs.
   """
-  def redis_worker_spec(args) do
+  def redix_worker_spec(args) do
     %{
       redis_url:  redis_url,
       redix_opts: redix_opts,
     } = Config.config_map(args)
 
-    Redix.child_spec({redis_url, redix_opts})
+    {redis_url, redix_opts}
+    # Bug in redix https://github.com/whatyouhide/redix/blob/master/lib/redix.ex#L353
+    # |> normalize_redix_spec
+    |> Redix.child_spec
   end
 
+  @doc """
+  Normalizes the Redix worker args so that it is compatible with poolboy.
+  Extracted from the Redix source code.
+  """
+  def normalize_redix_spec({uri, other_opts}) do
+    uri
+    |> Redix.URI.opts_from_uri
+    |> Keyword.merge(other_opts)
+  end
+
+
   @doc"""
-  Wrapper to call `Redix.command/3` inside a poolboy worker.
+  Wrapper to call `Redix.command/3` inside a poolboy transaction.
 
   ## Examples
 
@@ -108,13 +138,13 @@ defmodule RedixPool do
   def command(pool_name, args, opts \\ []) do
     :poolboy.transaction(
       pool_name,
-      fn(worker) -> GenServer.call(worker, {:command, args, opts}) end,
+      fn(conn) -> Redix.command(conn, args, opts) end,
       poolboy_timeout(pool_name)
     )
   end
 
   @doc"""
-  Wrapper to call `Redix.command!/3` inside a poolboy worker, raising if
+  Wrapper to call `Redix.command!/3` inside a poolboy transaction, raising if
   there's an error.
 
   ## Examples
@@ -128,13 +158,13 @@ defmodule RedixPool do
   def command!(pool_name, args, opts \\ []) do
     :poolboy.transaction(
       pool_name,
-      fn(worker) -> GenServer.call(worker, {:command!, args, opts}) end,
+      fn(conn) -> Redix.command!(conn, args, opts) end,
       poolboy_timeout(pool_name)
     )
   end
 
   @doc"""
-  Wrapper to call `Redix.pipeline/3` inside a poolboy worker.
+  Wrapper to call `Redix.pipeline/3` inside a poolboy transaction.
 
   ## Examples
 
@@ -149,13 +179,13 @@ defmodule RedixPool do
   def pipeline(pool_name, args, opts \\ []) do
     :poolboy.transaction(
       pool_name,
-      fn(worker) -> GenServer.call(worker, {:pipeline, args, opts}) end,
+      fn(conn) -> Redix.pipeline(conn, args, opts) end,
       poolboy_timeout(pool_name)
     )
   end
 
   @doc"""
-  Wrapper to call `Redix.pipeline!/3` inside a poolboy worker, raising if there
+  Wrapper to call `Redix.pipeline!/3` inside a poolboy transaction, raising if there
   are errors issuing the commands (but not if the commands are successfully
   issued and result in errors).
 
@@ -171,7 +201,7 @@ defmodule RedixPool do
   def pipeline!(pool_name, args, opts \\ []) do
     :poolboy.transaction(
       pool_name,
-      fn(worker) -> GenServer.call(worker, {:pipeline!, args, opts}) end,
+      fn(conn) -> Redix.pipeline!(conn, args, opts) end,
       poolboy_timeout(pool_name)
     )
   end

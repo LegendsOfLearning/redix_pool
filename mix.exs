@@ -30,7 +30,7 @@ defmodule RedixPool.Mixfile do
   def application do
     # Specify extra applications you'll use from Erlang/Elixir
     [extra_applications: [:logger],
-     mod: {RedixPool, [[pool: :redix_default], [pool: :test_pool]]}]
+     mod: {RedixPool, []}]
   end
 
   # Dependencies can be Hex packages:
