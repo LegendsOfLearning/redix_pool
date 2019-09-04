@@ -25,6 +25,9 @@ config :redix_pool, :test_config,
 config :redix_pool, :test_env_config,
   redis_url: {:system, "TEST_REDIS_URL", "redis://127.0.0.1/6379/1"}
 
+config :redix_pool, :test_env_parsing,
+  pool_size: {:system, "TEST_POOL_SIZE", 8}
+
 # You can configure for your application as:
 #
 #     config :redix_pool, key: :value
