@@ -45,6 +45,7 @@ defmodule RedixPool.Config do
     redis_url  = args[:redis_url]  || get({pool_name, :redis_url}, @default_redis_url)
     # TODO: Possibly filter this through resolve_config {:system, _}
     redix_opts = args[:redix_opts] || get({pool_name, :redix_opts}, [])
+    redix_opts = normalize_redix_opts(redix_opts)
 
     pool_size= args[:pool_size] || get({pool_name, :pool_size, :integer}, @default_pool_size)
     pool_max_overflow = args[:pool_max_overflow] ||
@@ -61,6 +62,18 @@ defmodule RedixPool.Config do
 
   @doc "Gets the list of pools to start when RedixPool application starts"
   def starting_pools, do: Application.get_env(:redix_pool, :start_pools, [])
+
+  @doc false
+  def normalize_redix_opts(opts) do
+    cond do
+      opts[:ssl] -> opts
+      opts[:socket_opts][:verify] ->
+        # If we are not using SSL, then drop the verify option, otherwise
+        # Erlang tcp will fail
+        Keyword.put(opts, :socket_opts, Keyword.drop(opts[:socket_opts], [:verify]))
+      true -> opts
+    end
+  end
 
   @doc false
   def get({pool_name, key, :integer}, default) do

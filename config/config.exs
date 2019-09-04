@@ -12,7 +12,12 @@ config :redix_pool,
   start_pools: [:redix_default]
 
 config :redix_pool, :redix_default, []
-config :redix_pool, :test_pool, [timeout: 2000]
+
+# Test a config that does not use SSL, and yet we pass in a
+# verify_none. The RedixPool.Config should scrub that out.
+config :redix_pool, :test_pool,
+  redix_opts: [socket_opts: [verify: :verify_none]],
+  timeout: 2000
 
 # You can configure for your application as:
 #
