@@ -92,7 +92,7 @@ defmodule RedixPool do
       redix_opts: redix_opts,
     } = Config.config_map(args)
 
-    redix_child_spec(redix_opts)
+    Redix.child_spec(redix_opts)
   end
 
   @doc """

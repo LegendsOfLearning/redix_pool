@@ -49,9 +49,9 @@ defmodule RedixPool.Config do
     # TODO: Use separate SSL socket opts when SSL is requested
     redix_opts = @default_redis_url
     |> opts_from_uri                           # Defaults
-    |> Keyword.merge(redix_opts_from_config)             # Override from config
+    |> Keyword.merge(redix_opts_from_config)   # Override from config
     |> Keyword.merge(opts_from_uri(redis_url)) # Override from supplied redis uri
-    |> normalize_redix_opts                              # Filter out ssl socket_opts' if not using ssl
+    |> normalize_redix_opts                    # Filter out ssl socket_opts' if not using ssl
 
     pool_size= args[:pool_size] || get({pool_name, :pool_size, :integer}, @default_pool_size)
     pool_max_overflow = args[:pool_max_overflow] ||

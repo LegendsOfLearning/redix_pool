@@ -38,6 +38,24 @@ defmodule RedixPoolConfigTest do
     assert redix_opts[:port] == expected_port
     assert redix_opts[:database] == 3
     assert redix_opts[:ssl] != true
+    # Configured ssl verify option should be removed if redis_url does not use ssl
+    # TODO: We probably should make a ssl_redix_opts for just that
+    assert redix_opts[:socket_opts][:verify] == nil
+
+    expected_port = 4000 + :rand.uniform(2000)
+    expected_redis_url = "rediss://127.0.0.1:#{expected_port}/3"
+    :ok = System.put_env("TEST_REDIS_URL", expected_redis_url)
+
+    assert System.get_env("TEST_REDIS_URL") == expected_redis_url
+
+    %{
+      redix_opts: redix_opts
+    } = RedixPool.Config.config_map(pool: :test_env_config)
+    assert redix_opts[:host] == "127.0.0.1"
+    assert redix_opts[:port] == expected_port
+    assert redix_opts[:database] == 3
+    assert redix_opts[:ssl] == true
+    assert redix_opts[:socket_opts][:verify] == :verify_none
   end
 
   test "system env parsing pool_size (integer)" do
