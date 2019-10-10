@@ -12,6 +12,59 @@ defmodule RedixPoolConfigTest do
     assert redix_opts[:ssl] != true
   end
 
+  test "config values nil or blank redis_url" do
+    Application.put_env(:redix_pool, :test_empty_config, nil)
+
+    %{
+      redix_opts: redix_opts
+    } = RedixPool.Config.config_map(pool: :test_empty_config)
+
+    assert redix_opts[:host] == "localhost"
+    assert redix_opts[:port] == 6379
+    assert redix_opts[:database] == 0
+    assert redix_opts[:ssl] != true
+
+    Application.put_env(:redix_pool, :test_empty_config, [redis_url: ""])
+
+    %{
+      redix_opts: redix_opts
+    } = RedixPool.Config.config_map(pool: :test_empty_config)
+
+    assert redix_opts[:host] == "localhost"
+    assert redix_opts[:port] == 6379
+    assert redix_opts[:database] == 0
+    assert redix_opts[:ssl] != true
+
+    # Use localhost redis if URL is nil or blank
+
+    rand_number = :rand.uniform(999999)
+    env_var = "TEST_REDIS_URL_#{rand_number}"
+    Application.put_env(:redix_pool, :test_empty_config, [redis_url: {:system, env_var}])
+    assert System.get_env(env_var) == nil
+
+    %{
+      redix_opts: redix_opts
+    } = RedixPool.Config.config_map(pool: :test_empty_config)
+
+    assert redix_opts[:host] == "localhost"
+    assert redix_opts[:port] == 6379
+    assert redix_opts[:database] == 0
+    assert redix_opts[:ssl] != true
+
+    :ok = System.put_env(env_var, "")
+    assert System.get_env(env_var) == ""
+
+    %{
+      redix_opts: redix_opts
+    } = RedixPool.Config.config_map(pool: :test_empty_config)
+
+    assert redix_opts[:host] == "localhost"
+    assert redix_opts[:port] == 6379
+    assert redix_opts[:database] == 0
+    assert redix_opts[:ssl] != true
+  end
+
+
   test "system env parsing redis_url (string)" do
     assert System.get_env("TEST_REDIS_URL") == nil
 
