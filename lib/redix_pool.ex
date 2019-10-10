@@ -69,24 +69,10 @@ defmodule RedixPool do
   def redix_pool_spec(args) when is_list(args) do
     %{
       pool_name: pool_name,
-      redis_url: redis_url,
       redix_opts: redix_opts,
       pool_size: pool_size,
       pool_max_overflow: pool_max_overflow
     } = Config.config_map(args)
-
-    # Extract Redix worker module and opts from Redix.child_spec
-    # This allows poolboy to supervise Redix.Connection workers directly,
-    # minimizing deep-copies.
-    #%{start: {redix_worker_mod, _start_link, worker_args}} = {redis_url, redix_opts}
-    #|> normalize_redix_spec
-    #|> Redix.child_spec
-
-    # NOTE: Redix has a bug in child_spec which wraps the keyword list into
-    # another list. Poolboy will only accept worker args in the form of a
-    # keyword list. So here, we have to know some of the implementation
-    # details of redix to make this work.
-    worker_args = normalize_redix_spec({redis_url, redix_opts})
 
     pool_options = [
       name:          {:local, pool_name},
@@ -95,7 +81,7 @@ defmodule RedixPool do
       max_overflow:  pool_max_overflow
     ]
 
-    :poolboy.child_spec(pool_name, pool_options, worker_args)
+    :poolboy.child_spec(pool_name, pool_options, redix_opts)
   end
 
   @doc """
@@ -103,14 +89,10 @@ defmodule RedixPool do
   """
   def redix_worker_spec(args) do
     %{
-      redis_url:  redis_url,
       redix_opts: redix_opts,
     } = Config.config_map(args)
 
-    {redis_url, redix_opts}
-    # Bug in redix https://github.com/whatyouhide/redix/blob/master/lib/redix.ex#L353
-    # |> normalize_redix_spec
-    |> Redix.child_spec
+    Redix.child_spec(redix_opts)
   end
 
   @doc """
@@ -122,7 +104,6 @@ defmodule RedixPool do
     |> Redix.URI.opts_from_uri
     |> Keyword.merge(other_opts)
   end
-
 
   @doc"""
   Wrapper to call `Redix.command/3` inside a poolboy transaction.

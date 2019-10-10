@@ -42,10 +42,16 @@ defmodule RedixPool.Config do
   def config_map(args) do
     pool_name = args[:pool] || raise "Must pass [pool: pool_name]"
 
-    redis_url  = args[:redis_url]  || get({pool_name, :redis_url}, @default_redis_url)
     # TODO: Possibly filter this through resolve_config {:system, _}
-    redix_opts = args[:redix_opts] || get({pool_name, :redix_opts}, [])
-    redix_opts = normalize_redix_opts(redix_opts)
+    redis_url  = args[:redis_url]  || get({pool_name, :redis_url})
+    redix_opts_from_config = args[:redix_opts] || get({pool_name, :redix_opts}, [])
+
+    # TODO: Use separate SSL socket opts when SSL is requested
+    redix_opts = @default_redis_url
+    |> opts_from_uri                           # Defaults
+    |> Keyword.merge(redix_opts_from_config)   # Override from config
+    |> Keyword.merge(opts_from_uri(redis_url)) # Override from supplied redis uri
+    |> normalize_redix_opts                    # Filter out ssl socket_opts' if not using ssl
 
     pool_size= args[:pool_size] || get({pool_name, :pool_size, :integer}, @default_pool_size)
     pool_max_overflow = args[:pool_max_overflow] ||
@@ -53,7 +59,6 @@ defmodule RedixPool.Config do
 
     %{
       pool_name: pool_name,
-      redis_url: redis_url,
       redix_opts: redix_opts,
       pool_size: pool_size,
       pool_max_overflow: pool_max_overflow
@@ -66,8 +71,8 @@ defmodule RedixPool.Config do
   @doc false
   def normalize_redix_opts(opts) do
     cond do
-      opts[:ssl] -> opts
-      opts[:socket_opts][:verify] ->
+      opts[:ssl] == true -> opts
+      !is_nil(opts[:socket_opts][:verify]) ->
         # If we are not using SSL, then drop the verify option, otherwise
         # Erlang tcp will fail
         Keyword.put(opts, :socket_opts, Keyword.drop(opts[:socket_opts], [:verify]))
@@ -118,4 +123,10 @@ defmodule RedixPool.Config do
   defp present_or_default(x, default) when is_nil(x), do: default
   defp present_or_default("", default), do: default
   defp present_or_default(x, _default), do: x
+
+  @doc false
+  # Add identity clauses
+  defp opts_from_uri(nil), do: []
+  defp opts_from_uri(""), do: []
+  defp opts_from_uri(uri) when is_binary(uri), do: Redix.URI.opts_from_uri(uri)
 end

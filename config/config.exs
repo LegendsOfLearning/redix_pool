@@ -20,10 +20,14 @@ config :redix_pool, :test_pool,
   timeout: 2000
 
 config :redix_pool, :test_config,
-  redis_url: "redis://127.0.0.1/6379/5"
+  redis_url: "redis://127.0.0.1:6379/5"
 
 config :redix_pool, :test_env_config,
-  redis_url: {:system, "TEST_REDIS_URL", "redis://127.0.0.1/6379/1"}
+  redis_url: {:system, "TEST_REDIS_URL", "redis://127.0.0.1:6379/1"},
+  redix_opts: [
+    socket_opts: [verify: :verify_none]
+  ]
+
 
 config :redix_pool, :test_env_parsing,
   pool_size: {:system, "TEST_POOL_SIZE", 8},
