@@ -41,21 +41,29 @@ defmodule RedixPool.Config do
   @doc "Compute and parse config map by pool name"
   def config_map(args) do
     pool_name = args[:pool] || raise "Must pass [pool: pool_name]"
+    config_loc = args[:config_loc] || pool_name
 
     # TODO: Possibly filter this through resolve_config {:system, _}
-    redis_url  = args[:redis_url]  || get({pool_name, :redis_url})
-    redix_opts_from_config = args[:redix_opts] || get({pool_name, :redix_opts}, [])
+    redis_url = args[:redis_url] || get({config_loc, :redis_url})
+    redix_opts_from_config = args[:redix_opts] || get({config_loc, :redix_opts}, [])
 
     # TODO: Use separate SSL socket opts when SSL is requested
-    redix_opts = @default_redis_url
-    |> opts_from_uri                           # Defaults
-    |> Keyword.merge(redix_opts_from_config)   # Override from config
-    |> Keyword.merge(opts_from_uri(redis_url)) # Override from supplied redis uri
-    |> normalize_redix_opts                    # Filter out ssl socket_opts' if not using ssl
+    redix_opts =
+      @default_redis_url
+      # Defaults
+      |> opts_from_uri
+      # Override from config
+      |> Keyword.merge(redix_opts_from_config)
+      # Override from supplied redis uri
+      |> Keyword.merge(opts_from_uri(redis_url))
+      # Filter out ssl socket_opts' if not using ssl
+      |> normalize_redix_opts
 
-    pool_size= args[:pool_size] || get({pool_name, :pool_size, :integer}, @default_pool_size)
-    pool_max_overflow = args[:pool_max_overflow] ||
-      get({pool_name, :pool_max_overflow, :integer}, @default_pool_max_overflow)
+    pool_size = args[:pool_size] || get({config_loc, :pool_size, :integer}, @default_pool_size)
+
+    pool_max_overflow =
+      args[:pool_max_overflow] ||
+        get({config_loc, :pool_max_overflow, :integer}, @default_pool_max_overflow)
 
     %{
       pool_name: pool_name,
@@ -71,12 +79,16 @@ defmodule RedixPool.Config do
   @doc false
   def normalize_redix_opts(opts) do
     cond do
-      opts[:ssl] == true -> opts
+      opts[:ssl] == true ->
+        opts
+
       !is_nil(opts[:socket_opts][:verify]) ->
         # If we are not using SSL, then drop the verify option, otherwise
         # Erlang tcp will fail
         Keyword.put(opts, :socket_opts, Keyword.drop(opts[:socket_opts], [:verify]))
-      true -> opts
+
+      true ->
+        opts
     end
   end
 
@@ -107,15 +119,17 @@ defmodule RedixPool.Config do
   def get(key) when is_atom(key), do: get(key, nil)
 
   @doc "Helper function useful for parsing ENV variables"
-  def maybe_to_integer(x) when is_binary(x),  do: String.to_integer(x)
+  def maybe_to_integer(x) when is_binary(x), do: String.to_integer(x)
   def maybe_to_integer(x) when is_integer(x), do: x
-  def maybe_to_integer(x) when is_nil(x),     do: nil
+  def maybe_to_integer(x) when is_nil(x), do: nil
 
   @doc false
   def resolve_config({:system, var_name, user_default}, _lib_default),
     do: System.get_env(var_name) |> present_or_default(user_default)
+
   def resolve_config({:system, var_name}, default),
     do: System.get_env(var_name) |> present_or_default(default)
+
   def resolve_config(value, default) when is_nil(value), do: default
   def resolve_config(value, _default), do: value
 
