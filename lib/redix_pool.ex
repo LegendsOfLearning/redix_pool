@@ -101,7 +101,7 @@ defmodule RedixPool do
   """
   def normalize_redix_spec({uri, other_opts}) do
     uri
-    |> Redix.URI.opts_from_uri
+    |> Redix.URI.to_start_options
     |> Keyword.merge(other_opts)
   end
 

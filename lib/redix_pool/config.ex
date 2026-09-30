@@ -142,5 +142,5 @@ defmodule RedixPool.Config do
   # Add identity clauses
   defp opts_from_uri(nil), do: []
   defp opts_from_uri(""), do: []
-  defp opts_from_uri(uri) when is_binary(uri), do: Redix.URI.opts_from_uri(uri)
+  defp opts_from_uri(uri) when is_binary(uri), do: Redix.URI.to_start_options(uri)
 end

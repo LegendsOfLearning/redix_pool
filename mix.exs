@@ -45,7 +45,7 @@ defmodule RedixPool.Mixfile do
   defp deps do
     [{:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
      {:secure_random, "~> 0.5", only: :test, runtime: false},
-     {:redix, "~> 1.1"},
+     {:redix, "~> 1.2"},
      {:poolboy, "~> 1.5"}]
   end
 end
